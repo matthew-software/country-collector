@@ -1,5 +1,3 @@
 from django.db import models
 
-class Country(models.Model):
-    name = models.CharField(max_length=64)
-    capital = models.CharField(max_length=64)
+# Create your models here.
