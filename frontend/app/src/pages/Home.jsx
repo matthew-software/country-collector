@@ -1,5 +1,7 @@
+import MapComponent from "../components/MapComponent";
+
 function Home() {
-    return <div>Home</div>
+    return <MapComponent />
 }
 
 export default Home

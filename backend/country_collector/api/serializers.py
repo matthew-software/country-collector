@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 class CountrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Country
-        fields = ['country_name', 'capital', 'flag_url']
+        fields = ["country_name", "country_code", "capital", "flag_url"]
 
 
 class UserCountrySerializer(serializers.ModelSerializer):
@@ -26,4 +26,4 @@ class UserCountrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserCountry
-        fields = ['user', 'country', 'collected', 'collected_date']
+        fields = ["user", "country", "collected", "collected_date"]

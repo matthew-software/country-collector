@@ -36,17 +36,19 @@ class Command(BaseCommand):
             for country_data in countries_data:
                 # Extract the relevant information from the API data
                 country_name = country_data.get('name', {}).get('common')
+                country_code = country_data.get('cca2', None)
                 capital = country_data.get('capital', [None])[0]
                 flag_url = country_data.get('flags', {}).get('png')
 
-                if country_name and flag_url:
+                if country_name and country_code and flag_url:
                     # Download the flag image and save it locally
                     flag_image_path = self.download_flag_image(flag_url, country_name)
 
                     # Populate the Country model in the database
                     Country.objects.update_or_create(
-                        country_name=country_name,
+                        country_code=country_code,
                         defaults={
+                            'country_name': country_name,
                             'capital': capital,
                             'flag_url': flag_image_path
                         }

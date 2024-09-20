@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 class Country(models.Model):
     country_name = models.CharField(max_length=100)
+    country_code = models.CharField(max_length=2, unique=True, null=True, blank=True)
     capital = models.CharField(max_length=100, null=True, blank=True)
     flag_url = models.URLField(null=True, blank=True)
 
