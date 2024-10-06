@@ -1,7 +1,12 @@
-import MapComponent from "../components/MapComponent";
+import React from 'react';
+import MapContainerComponent from '../components/MapContainerComponent';
 
 function Home() {
-    return <MapComponent />
+    return (
+        <div>
+            <MapContainerComponent appType='dash' />
+        </div>
+    );
 }
 
-export default Home
+export default Home;

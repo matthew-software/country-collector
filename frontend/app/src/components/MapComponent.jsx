@@ -1,105 +1,267 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import api from '../api';  // Import your axios instance
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField } from '@mui/material';
+import api from '../api';
 
-const MapComponent = () => {
-    const [geoData, setGeoData] = useState(null);  // GeoJSON data for all countries
-    const [collectedCountries, setCollectedCountries] = useState([]);  // Collected countries data
+const MapComponent = ({ geoData, countriesInfo = [], collectedInfo = [], setCollectedInfo, appType }) => {
+    const [selectedCountry, setSelectedCountry] = useState(null);
+    const [openModal, setOpenModal] = useState(false);
+    const [countryInfo, setCountryInfo] = useState(null);
+    const [uncollectedCountries, setUncollectedCountries] = useState([]);
+    const [formInput, setFormInput] = useState({ countryName: '', capitalName: '', selectedFlag: null });
 
-    // Fetch GeoJSON data (example: from a file or an API endpoint)
-    useEffect(() => {
-        fetch('/geojson/countries.geojson')
-            .then(response => response.json())
-            .then(data => {
-                console.log("Fetched GeoJSON Data: ", data);
+    const handleCountryMouseover = (layer) => {
+        layer.setStyle({
+            // weight: 3,
+            color: 'white',
+            // fillOpacity: 0.7,
+        });
+    };
+    
+    const handleCountryMouseout = (layer) => {
+        layer.setStyle({
+            // weight: 1,
+            // color: 'black',
+            // fillOpacity: 0.2,
+            
+            // fillColor: isCollected ? 'aqua' : 'darkslategray',
+            // weight: 1,
+            color: 'black',
+            // fillOpacity: 0.3,
+        });
+    };
 
-                // Check if it's a GeometryCollection and convert it to a FeatureCollection
-                if (data.type === 'GeometryCollection') {
-                    const featureCollection = {
-                        type: 'FeatureCollection',
-                        features: data.geometries.map(geometry => ({
-                            type: 'Feature',
-                            geometry: geometry,
-                            properties: {}  // Add any properties if needed, such as country codes
-                        }))
-                    };
-                    setGeoData(featureCollection);
-                    console.log("Converted GeoJSON to FeatureCollection:", featureCollection);
-                } else {
-                    setGeoData(data);  // If it's already a FeatureCollection, just set it
-                    console.log("GeoJSON Data is already a FeatureCollection:", data);
-                }
-            })
-            .catch(error => console.error('Error fetching GeoJSON:', error));
-    }, []);
+    const handleCountryClick = (feature) => {
+        const iso_a2 = feature.properties.ISO_A2;
 
-    // Fetch collected countries for the user from the backend API
-    useEffect(() => {
-        api.get('/api/collected-countries/')
-            .then(response => {
-                console.log('Fetched Collected Countries:', response.data);
-                // Ensure we are extracting the array from the response
-                if (response.data && Array.isArray(response.data.collected_countries)) {
-                    setCollectedCountries(response.data.collected_countries);
-                } else {
-                    console.error('Expected an array of collected countries');
-                }
-            })
-            .catch(error => console.error('Error fetching collected countries:', error));
-    }, []);
+        // Update selected country
+        setSelectedCountry(feature);
+        
+        // Find country information
+        const foundCountryInfo = countriesInfo.find(
+            country => country.country_code === iso_a2
+        );
+        
+        setCountryInfo(foundCountryInfo);
 
-    // Function to style the country polygons
+        // If in game mode, filter out uncollected countries
+        if (appType === 'game') {
+            const allUncollectedCountries = countriesInfo.filter(
+                country => !collectedInfo.includes(country.country_code)
+            );
+            setUncollectedCountries(allUncollectedCountries);
+        }
+
+        handleModalOpen();
+    };
+
+    const handleModalOpen = () => {
+        setOpenModal(true);
+        document.querySelector('.map-container').setAttribute('inert', 'true');
+    };
+
+    const handleModalClose = () => {
+        setOpenModal(false);
+        document.querySelector('.map-container').removeAttribute('inert');
+        // Optionally add a timeout to prevent flickering
+        setTimeout(() => {
+            setSelectedCountry(null);
+            setCountryInfo(null); // Clear the country info
+            setUncollectedCountries([]); // Clear uncollected countries when closing
+            setFormInput({ countryName: '', capitalName: '', selectedFlag: null });
+        }, 300); // 300 ms delay
+    };
+
+    const handleInputChange = (event) => {
+        const { name, value } = event.target;
+        setFormInput({ ...formInput, [name]: value });
+    };
+
+    const handleFlagClick = (countryCode) => {
+        setFormInput({ ...formInput, selectedFlag: countryCode });
+    };
+
+    const handleSubmit = async () => {
+        try {
+            const response = await api.post('/api/check-country-guess/', {
+                clickedCountry: countryInfo.country_name,
+                countryName: formInput.countryName,
+                capitalName: formInput.capitalName,
+                selectedFlag: formInput.selectedFlag,
+            });
+
+            if (response.data.message === 'Country collected successfully') {
+                alert('You collected a new country!');
+
+                // Update the map to reflect the newly collected country
+                setCollectedInfo((prevCollectedInfo) => [...prevCollectedInfo, response.data.country_code]);
+
+                handleModalClose();
+            } else {
+                alert(response.data.message); // Either "Country already collected" or "Incorrect country information"
+            }
+        } catch (error) {
+            console.error('Error submitting guess:', error);
+            alert('Error checking the country guess. Please try again.');
+        }
+    };
+
+
+    const formatCountryName = (countryName) => {
+        return countryName.toLowerCase().replace(/ /g, '_');
+    };
+
+    // Style function for countries in the map
     const countryStyle = (feature) => {
-        const iso_a2 = feature.properties.ISO_A2;  // Use ISO_A2 code
-
-        if (!iso_a2) {
-            console.warn('Feature does not have ISO_A2 property:', feature.properties);
-            return {
-                fillColor: '#555555',  // Default color for features without ISO_A2
-                weight: 1,
-                color: '#000',
-                fillOpacity: 0.3
-            };
-        }
-
-        if (!Array.isArray(collectedCountries)) {
-            console.error('collectedCountries is not an array');
-            return {
-                fillColor: '#555555',  // Default color
-                weight: 1,
-                color: '#000',
-                fillOpacity: 0.3
-            };
-        }
-
-        const isCollected = collectedCountries.includes(iso_a2);
-        console.log('Feature Properties:', feature.properties); // Log feature properties for debugging
+        const iso_a2 = feature.properties.ISO_A2;
+        const isCollected = collectedInfo.includes(iso_a2);
 
         return {
-            fillColor: isCollected ? '#FFD700' : '#555555',  // Highlight collected countries in gold, others in dark gray
+            fillColor: isCollected ? 'aqua' : 'darkslategray',
             weight: 1,
-            color: '#000',
-            fillOpacity: isCollected ? 0.8 : 0.3
+            color: 'black',
+            fillOpacity: isCollected ? 0.8 : 0.3,
         };
     };
 
+    const onEachFeature = (feature, layer) => {
+        const iso_a2 = feature.properties.ISO_A2;
+        const isCollected = collectedInfo.includes(iso_a2);
+
+        // Country borders glow white and are clickable in the dashboard (but only if uncollected in the game)
+        if (
+            (appType === 'dash') ||
+            (appType === 'game' && !isCollected)
+        ) {
+            layer.on({
+                mouseover: () => handleCountryMouseover(layer),
+                mouseout: () => handleCountryMouseout(layer),
+                click: () => handleCountryClick(feature),
+            });
+        }
+    };
+
     return (
-        <MapContainer center={[0, 0]} zoom={2} style={{ height: '100vh', width: '100%' }}>
-            <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            />
-            {geoData && (
-                <GeoJSON
-                    data={geoData}
-                    style={countryStyle}
-                    onEachFeature={(feature, layer) => {
-                        // Optional: Add additional interactions or debugging here
-                    }}
+        <>
+            <MapContainer className="map-container" center={[0, 0]} zoom={2} minZoom={2} zoomControl={false}
+                maxBounds={[
+                    [-90, -180], // Southwest coordinates
+                    [90, 180] // Northeast coordinates
+                ]}
+                maxBoundsViscosity={1.0}
+                style={{ height: '100vh', width: '100%' }}
+            >
+                <TileLayer
+                    url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 />
-            )}
-        </MapContainer>
+                {geoData && (
+                    <GeoJSON
+                        key={collectedInfo.join(',')}
+                        data={geoData}
+                        style={countryStyle}
+                        onEachFeature={onEachFeature}
+                    />
+                )}
+            </MapContainer>
+
+            {/* Modal/ Dialog for Dashboard or Game */}
+            <Dialog open={openModal} onClose={handleModalClose}>
+                <DialogTitle style={{ background: 'darkslategray', color: 'white' }}>
+                    {appType === 'dash' ? (
+                        selectedCountry && countryInfo ? (
+                            <div fontSize="h4" text-align="center">
+                                {countryInfo.country_name}
+                            </div>
+                        ) : ('Loading country name...')
+                        ) : ('Guess the Country')}
+                </DialogTitle>
+                <DialogContent style={{ color: 'darkslategray', background: 'lightgray' }}>
+                    {appType === 'dash' ? (
+                        // Existing Dashboard Modal rendering...
+                        selectedCountry && countryInfo ? (
+                            <div>
+                                <Typography variant="h6" textAlign="center">
+                                    ___{/* countryInfo.country_name */}
+                                </Typography>
+                                <Typography>
+                                    <img
+                                        src={`${import.meta.env.VITE_API_URL}/static/${formatCountryName(countryInfo.country_name)}_flag.png`}
+                                        alt={`${countryInfo.country_name} flag`}
+                                        style={{ width: '100px', height: 'auto' }}
+                                    />
+                                </Typography>
+                                <Typography>
+                                    Capital: {countryInfo.capital || 'Unknown'}
+                                </Typography>
+                                <Typography>
+                                    ISO Code: {selectedCountry.properties.ISO_A2}
+                                </Typography>
+                            </div>
+                        ) : (
+                            <Typography>Loading country data...</Typography>
+                        )
+                    ) : (
+                        // Game Modal: Form and scrollable list of flags for uncollected countries
+                        <div>
+                            <TextField
+                                label="Country Name"
+                                name="countryName"
+                                value={formInput.countryName}
+                                onChange={handleInputChange}
+                                fullWidth
+                                margin="normal"
+                            />
+                            <TextField
+                                label="Capital Name"
+                                name="capitalName"
+                                value={formInput.capitalName}
+                                onChange={handleInputChange}
+                                fullWidth
+                                margin="normal"
+                            />
+                            <Typography variant="h6">Select a Flag</Typography>
+                            <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexWrap: 'wrap' }}>
+                                {uncollectedCountries.length > 0 && uncollectedCountries.map((country) => (
+                                    <div
+                                        key={country.country_code}
+                                        onClick={() => handleFlagClick(country.country_code)}
+                                        style={{
+                                            margin: '5px',
+                                            textAlign: 'center',
+                                            cursor: 'pointer',
+                                            padding: '3px'
+                                        }}
+                                    >
+                                        <img
+                                            src={`${import.meta.env.VITE_API_URL}/static/${formatCountryName(country.country_name)}_flag.png`}
+                                            alt = {`???`}
+                                            style={{
+                                                width: '50px',
+                                                height: 'auto',
+                                                border: formInput.selectedFlag === country.country_code ? '3px solid blue' : 'none',
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+                <DialogActions style={{ color: 'white', background: 'lightgray' }}>
+                    <Button onClick={handleModalClose}>Close</Button>
+                    {appType === 'game' && (
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={!formInput.countryName || !formInput.capitalName || !formInput.selectedFlag}
+                        >
+                            Submit
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
+        </>
     );
 };
 
