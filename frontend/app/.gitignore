@@ -1,0 +1,7 @@
+# Frontend .gitignore
+
+# Ignore environment file in the frontend
+.env
+
+# Ignore dependency folder
+node_modules/

@@ -1,0 +1,11 @@
+# Backend .gitignore
+
+# Ignore environment file in the backend
+.env
+
+# Ignore SQLite database
+db.sqlite3
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/

@@ -34,7 +34,7 @@ const MapContainerComponent = ({ appType }) => {
             .catch(error => console.error('Error fetching GeoJSON:', error));
     }, []);
 
-    // Fetch collected countries and uncollected country names
+    // Fetch collected countries and collected country codes
     useEffect(() => {
         // const apiUrl = '/api/collected-countries/';
         const apiUrlCountries = '/api/all-countries/';
@@ -46,6 +46,7 @@ const MapContainerComponent = ({ appType }) => {
                 // Ensure we are extracting the array from the response
                 if (response.data.countries) {
                     setCountries(response.data.countries);
+                    console.log('COUNTRIES HEREEEEEE:', countries)
                 } else {
                     console.error('Expected an array of collected countries');
                 }
@@ -54,6 +55,7 @@ const MapContainerComponent = ({ appType }) => {
         api.get(apiUrlCollected)
             .then(response => {
                 console.log('Fetched Codes:', response.data);
+                // Ensure we are extracting the array from the response
                 if (response.data.collected_country_codes) {
                     setCollectedCountryCodes(response.data.collected_country_codes);
                 } else {

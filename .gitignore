@@ -1,3 +1,5 @@
+# Root .gitignore
+
 # Logs
 logs
 *.log
@@ -7,7 +9,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Ignore virtual environment in the backend
+# Virtual environment in the backend
 backend/env/
 
 # Python cache files
@@ -20,7 +22,10 @@ __pycache__/
 *.log
 *.pot
 *.pyc
-.env
+
+# Environment files
+backend/.env
+frontend/.env
 
 # Node.js modules and build output in frontend
 frontend/app/node_modules/

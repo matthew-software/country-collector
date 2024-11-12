@@ -47,10 +47,13 @@ const MapComponent = ({ geoData, countriesInfo = [], collectedInfo = [], setColl
 
         // If in game mode, filter out uncollected countries
         if (appType === 'game') {
+            console.log('countriesInfo:', countriesInfo)
             const allUncollectedCountries = countriesInfo.filter(
                 country => !collectedInfo.includes(country.country_code)
             );
+            console.log('Filtered Uncollected Countries:', allUncollectedCountries);
             setUncollectedCountries(allUncollectedCountries);
+            console.log('uncollectedCountries:', uncollectedCountries)
         }
 
         handleModalOpen();
